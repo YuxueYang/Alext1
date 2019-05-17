@@ -8,23 +8,13 @@ X_train, y_train, X_val, y_val, X_test, y_test = \
     tl.files.load_mnist_dataset(shape=(-1, 28, 28, 1))
 
 sess = tf.InteractiveSession()
-batch_size = 128
+# batch_size = 128
+batch_size = 20
 
 x = tf.placeholder(tf.float32, shape=[batch_size, 28, 28, 1])
 y_ = tf.placeholder(tf.int64, shape=[batch_size])
 
-# network = tl.layers.InputLayer(x, name='input')
-# network = tl.layers.Conv2d(network, 32, (5, 5), (1, 1), act=tf.nn.relu, padding='SAME', name='cnn1')
-# network = tl.layers.MaxPool2d(network, (2, 2), (2, 2), padding='SAME', name='pool1')
-# network = tl.layers.Conv2d(network, 64, (5, 5), (1, 1), act=tf.nn.relu, padding='SAME', name='cnn2')
-# network = tl.layers.MaxPool2d(network, (2, 2), (2, 2), padding='SAME', name='pool2')
-#
-# network = tl.layers.FlattenLayer(network, name='flatten')
-# network = tl.layers.DropoutLayer(network, keep=0.5, name='drop1')
-# network = tl.layers.DenseLayer(network, 256, act=tf.nn.relu, name='relu1')
-# network = tl.layers.DropoutLayer(network, keep=0.5, name='drop2')
-# network = tl.layers.DenseLayer(network, 10, act=tf.identity, name='output')
-
+# AlexNet structure :5-conv layer; 3-fc layer
 inputs = tl.layers.InputLayer(x, name='input')
 conv1 = tl.layers.Conv2d(inputs, n_filter=96, filter_size=(11, 11), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv1')
 conv1 = tl.layers.MaxPool2d(conv1, filter_size=(3, 3), strides=(2, 2), padding='SAME', name='con1')
@@ -38,8 +28,10 @@ fat = tl.layers.FlattenLayer(conv5, name='fat')
 fc6 = tl.layers.DenseLayer(fat, 4096, act=tf.nn.relu, name='fc6')
 fc6 = tl.layers.DropoutLayer(fc6, keep=0.5, name='fc6')
 fc7 = tl.layers.DenseLayer(fc6, 4096, act=tf.nn.relu, name='fc7')
-fc8 = tl.layers.DenseLayer(fc7, 1000, act=tf.nn.relu, name='fc8')
-output = tl.layers.DenseLayer(fc8, 10, act=tf.identity, name='output')
+# fc8 = tl.layers.DenseLayer(fc7, 1000, act=tf.nn.relu, name='fc8')
+output = tl.layers.DenseLayer(fc7, 10, act=tf.identity, name='output')
+
+# output.print_layers()
 
 
 y = output.outputs
@@ -58,8 +50,10 @@ train_params = output.all_params
 train_op = tf.train.AdamOptimizer(learning_rate).minimize(cost, var_list=train_params)
 
 tl.layers.initialize_global_variables(sess)
-output.print_params()
-output.print_layers()
+print(train_params)
+# why can't use layer.print_params()?
+# output.print_params()
+# output.print_layers()
 
 print('   learning_rate: %f' % learning_rate)
 print('   batch_size: %d' % batch_size)
@@ -76,7 +70,7 @@ for epoch in range(n_epoch):
         print("Epoch %d of %d took %fs" % (epoch + 1, n_epoch, time.time() - start_time))
         train_loss, train_acc, n_batch = 0, 0, 0
         for X_train_a, y_train_a in tl.iterate.minibatches(X_train, y_train, batch_size, shuffle=True):
-            dp_dict = tl.utils.dict_to_one(output.all_drop)  # disable noise layers
+            dp_dict = tl.utils.dict_to_one(output.all_drop)
             feed_dict = {x: X_train_a, y_: y_train_a}
             feed_dict.update(dp_dict)
             err, ac = sess.run([cost, acc], feed_dict=feed_dict)
