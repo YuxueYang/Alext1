@@ -13,19 +13,36 @@ batch_size = 128
 x = tf.placeholder(tf.float32, shape=[batch_size, 28, 28, 1])
 y_ = tf.placeholder(tf.int64, shape=[batch_size])
 
-network = tl.layers.InputLayer(x, name='input')
-network = tl.layers.Conv2d(network, 32, (5, 5), (1, 1), act=tf.nn.relu, padding='SAME', name='cnn1')
-network = tl.layers.MaxPool2d(network, (2, 2), (2, 2), padding='SAME', name='pool1')
-network = tl.layers.Conv2d(network, 64, (5, 5), (1, 1), act=tf.nn.relu, padding='SAME', name='cnn2')
-network = tl.layers.MaxPool2d(network, (2, 2), (2, 2), padding='SAME', name='pool2')
+# network = tl.layers.InputLayer(x, name='input')
+# network = tl.layers.Conv2d(network, 32, (5, 5), (1, 1), act=tf.nn.relu, padding='SAME', name='cnn1')
+# network = tl.layers.MaxPool2d(network, (2, 2), (2, 2), padding='SAME', name='pool1')
+# network = tl.layers.Conv2d(network, 64, (5, 5), (1, 1), act=tf.nn.relu, padding='SAME', name='cnn2')
+# network = tl.layers.MaxPool2d(network, (2, 2), (2, 2), padding='SAME', name='pool2')
+#
+# network = tl.layers.FlattenLayer(network, name='flatten')
+# network = tl.layers.DropoutLayer(network, keep=0.5, name='drop1')
+# network = tl.layers.DenseLayer(network, 256, act=tf.nn.relu, name='relu1')
+# network = tl.layers.DropoutLayer(network, keep=0.5, name='drop2')
+# network = tl.layers.DenseLayer(network, 10, act=tf.identity, name='output')
 
-network = tl.layers.FlattenLayer(network, name='flatten')
-network = tl.layers.DropoutLayer(network, keep=0.5, name='drop1')
-network = tl.layers.DenseLayer(network, 256, act=tf.nn.relu, name='relu1')
-network = tl.layers.DropoutLayer(network, keep=0.5, name='drop2')
-network = tl.layers.DenseLayer(network, 10, act=tf.identity, name='output')
+inputs = tl.layers.InputLayer(x, name='input')
+conv1 = tl.layers.Conv2d(inputs, n_filter=96, filter_size=(11, 11), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv1')
+conv1 = tl.layers.MaxPool2d(conv1, filter_size=(3, 3), strides=(2, 2), padding='SAME', name='con1')
+conv2 = tl.layers.Conv2d(conv1, n_filter=256, filter_size=(5, 5), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv2')
+conv2 = tl.layers.MaxPool2d(conv2, filter_size=(3, 3), strides=(2, 2), padding='SAME', name='conv2')
+conv3 = tl.layers.Conv2d(conv2, n_filter=384, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv3')
+conv4 = tl.layers.Conv2d(conv3, n_filter=384, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv4')
+conv5 = tl.layers.Conv2d(conv4, n_filter=256, filter_size=(3, 3), strides=(1, 1), act=tf.nn.relu, padding='SAME', name='conv5')
+conv5 = tl.layers.MaxPool2d(conv5, filter_size=(3, 3), strides=(2, 2), padding='SAME', name='conv5')
+fat = tl.layers.FlattenLayer(conv5, name='fat')
+fc6 = tl.layers.DenseLayer(fat, 4096, act=tf.nn.relu, name='fc6')
+fc6 = tl.layers.DropoutLayer(fc6, keep=0.5, name='fc6')
+fc7 = tl.layers.DenseLayer(fc6, 4096, act=tf.nn.relu, name='fc7')
+fc8 = tl.layers.DenseLayer(fc7, 1000, act=tf.nn.relu, name='fc8')
+output = tl.layers.DenseLayer(fc8, 10, act=tf.identity, name='output')
 
-y = network.outputs
+
+y = output.outputs
 
 cost = tl.cost.cross_entropy(y, y_, 'cost')
 
@@ -37,12 +54,12 @@ n_epoch = 10
 learning_rate = 0.0001
 print_freq = 2
 
-train_params = network.all_params
+train_params = output.all_params
 train_op = tf.train.AdamOptimizer(learning_rate).minimize(cost, var_list=train_params)
 
 tl.layers.initialize_global_variables(sess)
-network.print_params()
-network.print_layers()
+output.print_params()
+output.print_layers()
 
 print('   learning_rate: %f' % learning_rate)
 print('   batch_size: %d' % batch_size)
@@ -52,14 +69,14 @@ for epoch in range(n_epoch):
     start_time = time.time()
     for X_train_a, y_train_a in tl.iterate.minibatches(X_train, y_train, batch_size, shuffle=True):
         feed_dict = {x: X_train_a, y_: y_train_a}
-        feed_dict.update(network.all_drop)
+        feed_dict.update(output.all_drop)
         sess.run(train_op, feed_dict=feed_dict)
 
     if epoch + 1 == 1 or (epoch + 1) % print_freq == 0:
         print("Epoch %d of %d took %fs" % (epoch + 1, n_epoch, time.time() - start_time))
         train_loss, train_acc, n_batch = 0, 0, 0
         for X_train_a, y_train_a in tl.iterate.minibatches(X_train, y_train, batch_size, shuffle=True):
-            dp_dict = tl.utils.dict_to_one(network.all_drop)  # disable noise layers
+            dp_dict = tl.utils.dict_to_one(output.all_drop)  # disable noise layers
             feed_dict = {x: X_train_a, y_: y_train_a}
             feed_dict.update(dp_dict)
             err, ac = sess.run([cost, acc], feed_dict=feed_dict)
@@ -71,7 +88,7 @@ for epoch in range(n_epoch):
 
         val_loss, val_acc, n_batch = 0, 0, 0
         for X_val_a, y_val_a in tl.iterate.minibatches(X_val, y_val, batch_size, shuffle=True):
-            dp_dict = tl.utils.dict_to_one(network.all_drop)
+            dp_dict = tl.utils.dict_to_one(output.all_drop)
             feed_dict = {x: X_val_a, y_: y_val_a}
             feed_dict.update(dp_dict)
             err, ac = sess.run([cost, acc], feed_dict=feed_dict)
@@ -81,7 +98,7 @@ for epoch in range(n_epoch):
         print("   val loss: %f" % (val_loss / n_batch))
         print("   val acc: %f" % (val_acc / n_batch))
         try:
-            tl.vis.CNN2d(network.all_params[0].eval(), second=50, saveable=True, name='cnn1_' + str(epoch + 1),
+            tl.vis.CNN2d(output.all_params[0].eval(), second=50, saveable=True, name='cnn1_' + str(epoch + 1),
                          fig_idx=2012)
         except:
             print("You should change vis.CNN(), if you want to save the feature images for different dataset")
@@ -89,7 +106,7 @@ for epoch in range(n_epoch):
 print('~~~~~~~~~~~~Evaluation~~~~~~~~~~~~~~~~~~')
 test_loss, test_acc, n_batch = 0, 0, 0
 for X_test_a, y_test_a in tl.iterate.minibatches(X_test, y_test, batch_size, shuffle=True):
-    dp_dict = tl.utils.dict_to_one(network.all_drop)
+    dp_dict = tl.utils.dict_to_one(output.all_drop)
     feed_dict = {x: X_test_a, y_: y_test_a}
     feed_dict.update(dp_dict)
     err, ac = sess.run([cost, acc], feed_dict=feed_dict)
