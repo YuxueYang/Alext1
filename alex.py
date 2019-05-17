@@ -1,7 +1,5 @@
-import numpy as np
 import tensorflow as tf
 import tensorlayer as tl
-# from tensorlayer.layers.core import set_keep
 import time
 
 X_train, y_train, X_val, y_val, X_test, y_test = \
@@ -91,11 +89,7 @@ for epoch in range(n_epoch):
             n_batch += 1
         print("   val loss: %f" % (val_loss / n_batch))
         print("   val acc: %f" % (val_acc / n_batch))
-        try:
-            tl.vis.CNN2d(output.all_params[0].eval(), second=50, saveable=True, name='cnn1_' + str(epoch + 1),
-                         fig_idx=2012)
-        except:
-            print("You should change vis.CNN(), if you want to save the feature images for different dataset")
+
 
 print('~~~~~~~~~~~~Evaluation~~~~~~~~~~~~~~~~~~')
 test_loss, test_acc, n_batch = 0, 0, 0
