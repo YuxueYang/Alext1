@@ -1,6 +1,12 @@
+# -*- coding: utf-8 -*-
 import tensorflow as tf
 import tensorlayer as tl
+import numpy as np
 import time
+
+
+tf.logging.set_verbosity("DEBUG")
+tl.logging.set_verbosity("DEBUG")
 
 X_train, y_train, X_val, y_val, X_test, y_test = \
     tl.files.load_mnist_dataset(shape=(-1, 28, 28, 1))
@@ -59,6 +65,7 @@ print('~~~~~~~~~~~training~~~~~~~~~~~')
 
 for epoch in range(n_epoch):
     start_time = time.time()
+    # tl.iterate.minibatches()输入特征及其对应的标签的两个Numpy数列依次同步的迭代函数
     for X_train_a, y_train_a in tl.iterate.minibatches(X_train, y_train, batch_size, shuffle=True):
         feed_dict = {x: X_train_a, y_: y_train_a}
         feed_dict.update(output.all_drop)
@@ -88,7 +95,8 @@ for epoch in range(n_epoch):
             val_acc += ac
             n_batch += 1
         print("   val loss: %f" % (val_loss / n_batch))
-        print("   val acc: %f" % (val_acc / n_batch))
+#         print("   val acc: %f" % (val_acc / n_batch))
+
 
 
 print('~~~~~~~~~~~~Evaluation~~~~~~~~~~~~~~~~~~')
@@ -103,3 +111,36 @@ for X_test_a, y_test_a in tl.iterate.minibatches(X_test, y_test, batch_size, shu
     n_batch += 1
 print("   test loss: %f" % (test_loss / n_batch))
 print("   test acc: %f" % (test_acc / n_batch))
+
+
+
+# -----------------------------融合模型-------------------------------------------
+# def acc(_logits, y_batch):
+#     # return np.mean(np.equal(np.argmax(_logits, 1), y_batch))
+#     return tf.reduce_mean(
+#         tf.cast(tf.equal(tf.argmax(_logits, 1), tf.convert_to_tensor(y_batch, tf.int64)), tf.float32), name='accuracy'
+#     )
+
+
+# tl.utils.fit(
+#     output, train_op=tf.train.AdamOptimizer(learning_rate=0.0001), cost=tl.cost.cross_entropy, X_train=X_train,
+#     y_train=y_train, acc=acc, batch_size=256, n_epoch=20, X_val=X_val, y_val=y_val, eval_train=True,
+#     tensorboard_dir='./tb_log'
+# )
+
+# # test
+# tl.utils.test(output, acc, X_test, y_test, batch_size=None, cost=tl.cost.cross_entropy)
+#
+# # evaluation
+# _logits = tl.utils.predict(output, X_test)
+# y_pred = np.argmax(_logits, 1)
+# tl.utils.evaluation(y_test, y_pred, n_classes=10)
+#
+# # save network weights
+# output.save_weights('model.h5')
+
+
+
+
+
+
